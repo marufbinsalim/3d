@@ -1,34 +1,37 @@
 import { OrbitControls } from "@react-three/drei";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { MovableCharacter } from "../components/MovableCharacter";
 import { PCFSoftShadowMap } from "three";
-import { Grid } from "@react-three/drei";
 
 function SceneHelpers({ cubePosition }) {
+  const colorMap = useLoader(THREE.TextureLoader, "/tiles-2/color.png");
+
+  // Repeat the texture to cover a large ground area
+  useEffect(() => {
+    if (colorMap) {
+      colorMap.wrapS = colorMap.wrapT = THREE.RepeatWrapping;
+      colorMap.repeat.set(50, 50); // adjust repeats to your liking
+    }
+  }, [colorMap]);
+
   return (
     <>
-      {/* Large ground plane that receives shadows */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[10000, 10000]} />
-        <shadowMaterial opacity={0.3} />
+      <ambientLight intensity={0.2} />
+      <directionalLight castShadow position={[5, 10, 5]} />
+
+      {/* Ground plane */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]} // rotate to lie flat
+        position={[0, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[100, 100]} />
+        <meshStandardMaterial map={colorMap} />
       </mesh>
 
-      {/* Infinite grid that follows the camera/character */}
-      <Grid
-        cellSize={1}
-        sectionSize={100}
-        infiniteGrid
-        sectionColor="#444444"
-        cellColor="#888888"
-        fadeDistance={150}
-        fadeStrength={1}
-        followCamera={true} // This makes grid follow the camera
-        position={[0, 0.01, 0]} // Slightly above the plane to prevent z-fighting
-      />
-
-      {/* Boxes that cast shadows */}
+      {/* Example boxes */}
       <mesh position={[10, 0.5, 0]} castShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="red" />
