@@ -16,7 +16,7 @@ export function MovableCharacter({
   targetHeight = 2,
   debug = false,
   onPositionChange = () => {},
-  staticBoundingBoxes = [], // <---- Add here
+  staticBoundingBoxes = [],
 }) {
   const groupRef = useRef();
   const wrapperRef = useRef();
@@ -37,7 +37,6 @@ export function MovableCharacter({
   const [scaleFactor, setScaleFactor] = useState(1);
   const { camera, scene: fiberScene } = useThree();
 
-  // Configure model
   useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
@@ -59,16 +58,15 @@ export function MovableCharacter({
 
     if (debug) {
       const helper = new THREE.BoxHelper(scene, 0xffffff);
-      helper.material = new THREE.LineBasicMaterial({ color: 0xffffff });
-      boxHelperMaterialRef.current = helper.material; // <- store material reference
+      boxHelperMaterialRef.current = helper.material;
       boxHelperRef.current = helper;
       fiberScene.add(helper);
 
       const canvas = document.createElement("canvas");
       canvas.width = 300;
-      canvas.height = 64;
+      canvas.height = 80;
       const ctx = canvas.getContext("2d");
-      ctx.font = "24px Arial";
+      ctx.font = "20px Arial";
       ctx.fillStyle = "white";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -79,7 +77,7 @@ export function MovableCharacter({
 
       const material = new THREE.SpriteMaterial({ map: texture });
       const sprite = new THREE.Sprite(material);
-      sprite.scale.set(2, 0.5, 1);
+      sprite.scale.set(2, 0.7, 1);
       positionLabelRef.current = { sprite, ctx, canvas, texture };
       fiberScene.add(sprite);
     }
@@ -93,12 +91,11 @@ export function MovableCharacter({
     };
   }, [scene, fiberScene, targetHeight, debug]);
 
-  // Keyboard handling
   useEffect(() => {
     const down = (e) => {
       const key = e.key.toLowerCase();
       if (key === " ") {
-        if (canJump.current && position.current[1] === 0) {
+        if (canJump.current) {
           keys.current["space"] = true;
           canJump.current = false;
         }
@@ -110,7 +107,6 @@ export function MovableCharacter({
       const key = e.key.toLowerCase();
       if (key === " ") {
         keys.current["space"] = false;
-        canJump.current = true;
       } else {
         keys.current[key] = false;
       }
@@ -124,7 +120,6 @@ export function MovableCharacter({
     };
   }, []);
 
-  // Animation state
   useEffect(() => {
     const animName = animationNames[0] || "Take 001";
     if (!actions[animName]) return;
@@ -144,7 +139,6 @@ export function MovableCharacter({
 
     let [x, y, z] = position.current;
     let [vx, vy, vz] = velocity.current;
-    const isOnGround = y <= 0.01;
 
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
@@ -161,76 +155,165 @@ export function MovableCharacter({
     if (keys.current["a"] || keys.current["arrowleft"]) moveDir.sub(right);
     moveDir.normalize();
 
+    const isOnGround = y <= 0.01;
+
     if (isOnGround) {
       vx = moveDir.x * speed;
       vz = moveDir.z * speed;
+      canJump.current = true;
     }
 
-    const movingNow = moveDir.length() > 0;
-    if (movingNow !== isMoving) {
-      setIsMoving(movingNow);
-    }
-
-    if (keys.current["space"] && isOnGround) {
+    if (keys.current["space"] && canJump.current) {
       vy = jumpVelocity;
+      canJump.current = false;
     }
 
     vy -= GRAVITY * delta;
 
-    // --- COLLISION CHECK START ---
-    const nextX = x + vx * delta;
-    const nextY = y + vy * delta;
-    const nextZ = z + vz * delta;
-
     const halfWidth = 0.5;
-    const playerBox = new THREE.Box3(
-      new THREE.Vector3(nextX - halfWidth, nextY, nextZ - halfWidth),
-      new THREE.Vector3(
-        nextX + halfWidth,
-        nextY + targetHeight,
-        nextZ + halfWidth
-      )
-    );
+    let newX = x;
+    let newY = y;
+    let newZ = z;
 
-    let collision = false;
-    for (const box of staticBoundingBoxes) {
-      if (playerBox.intersectsBox(box)) {
-        console.log("cat", box);
-        console.log("playerBox", playerBox);
+    // --- Y Axis collision ---
+    {
+      const playerBoxY = new THREE.Box3(
+        new THREE.Vector3(
+          newX - halfWidth,
+          newY + vy * delta,
+          newZ - halfWidth
+        ),
+        new THREE.Vector3(
+          newX + halfWidth,
+          newY + vy * delta + targetHeight,
+          newZ + halfWidth
+        )
+      );
 
-        collision = true;
-        break;
+      let collisionY = false;
+      let collisionYTop = null;
+
+      for (const box of staticBoundingBoxes) {
+        if (playerBoxY.intersectsBox(box)) {
+          collisionY = true;
+          const playerBottomY = newY + vy * delta;
+          const boxTopY = box.max.y;
+
+          if (
+            vy <= 0 &&
+            playerBottomY >= boxTopY - 0.1 &&
+            playerBottomY <= boxTopY + 0.5
+          ) {
+            collisionYTop = boxTopY;
+            vy = 0;
+            canJump.current = true;
+          }
+          break;
+        }
+      }
+
+      if (collisionY && collisionYTop !== null) {
+        newY = collisionYTop;
+        vy = 0;
+        canJump.current = true;
+
+        if (moveDir.length() === 0) {
+          vx = 0;
+          vz = 0;
+        } else {
+          vx = moveDir.x * speed;
+          vz = moveDir.z * speed;
+        }
+      } else if (collisionY) {
+        vy = 0;
+      } else {
+        newY += vy * delta;
       }
     }
 
-    if (collision) {
-      x = position.current[0];
-      z = position.current[2];
+    const horizontalCollisionY = newY + 0.05;
 
-      if (debug && boxHelperMaterialRef.current) {
-        boxHelperMaterialRef.current.color.set(0xff0000); // 🔴 red on collision
+    // --- X Axis collision ---
+    {
+      const playerBoxX = new THREE.Box3(
+        new THREE.Vector3(
+          newX + vx * delta - halfWidth,
+          horizontalCollisionY,
+          newZ - halfWidth
+        ),
+        new THREE.Vector3(
+          newX + vx * delta + halfWidth,
+          horizontalCollisionY + targetHeight,
+          newZ + halfWidth
+        )
+      );
+
+      let collisionX = false;
+      for (const box of staticBoundingBoxes) {
+        if (playerBoxX.intersectsBox(box)) {
+          collisionX = true;
+          break;
+        }
       }
-    } else {
-      if (debug && boxHelperMaterialRef.current) {
-        boxHelperMaterialRef.current.color.set(0xffffff); // ⚪ white if no collision
+      if (collisionX) {
+        vx = 0;
+        if (debug && boxHelperMaterialRef.current) {
+          boxHelperMaterialRef.current.color.set(0xff0000);
+        }
+      } else {
+        if (debug && boxHelperMaterialRef.current) {
+          boxHelperMaterialRef.current.color.set(0xffffff);
+        }
+        newX += vx * delta;
       }
-      x = nextX;
-      z = nextZ;
     }
 
-    y = nextY;
-    // --- COLLISION CHECK END ---
+    // --- Z Axis collision ---
+    {
+      const playerBoxZ = new THREE.Box3(
+        new THREE.Vector3(
+          newX - halfWidth,
+          horizontalCollisionY,
+          newZ + vz * delta - halfWidth
+        ),
+        new THREE.Vector3(
+          newX + halfWidth,
+          horizontalCollisionY + targetHeight,
+          newZ + vz * delta + halfWidth
+        )
+      );
 
-    if (y < 0) {
-      y = 0;
+      let collisionZ = false;
+      for (const box of staticBoundingBoxes) {
+        if (playerBoxZ.intersectsBox(box)) {
+          collisionZ = true;
+          break;
+        }
+      }
+      if (collisionZ) {
+        vz = 0;
+        if (debug && boxHelperMaterialRef.current) {
+          boxHelperMaterialRef.current.color.set(0xff0000);
+        }
+      } else {
+        if (debug && boxHelperMaterialRef.current) {
+          boxHelperMaterialRef.current.color.set(0xffffff);
+        }
+        newZ += vz * delta;
+      }
+    }
+
+    if (newY < 0) {
+      newY = 0;
       vy = 0;
+      canJump.current = true;
     }
 
-    position.current = [x, y, z];
+    position.current = [newX, newY, newZ];
     velocity.current = [vx, vy, vz];
-    onPositionChange([x, y, z]);
+    onPositionChange([newX, newY, newZ]);
 
-    groupRef.current.position.set(x, y, z);
+    groupRef.current.position.set(newX, newY, newZ);
 
     if (vx !== 0 || vz !== 0) {
       const angle = Math.atan2(vx, vz);
@@ -249,12 +332,17 @@ export function MovableCharacter({
       const { sprite, ctx, canvas, texture } = positionLabelRef.current;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillText(
-        `Pos: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`,
+        `Pos: ${newX.toFixed(2)}, ${newY.toFixed(2)}, ${newZ.toFixed(2)}`,
         canvas.width / 2,
-        canvas.height / 2
+        canvas.height / 2 - 16
+      );
+      ctx.fillText(
+        `Vel: ${vx.toFixed(2)}, ${vy.toFixed(2)}, ${vz.toFixed(2)}`,
+        canvas.width / 2,
+        canvas.height / 2 + 16
       );
       texture.needsUpdate = true;
-      sprite.position.set(x, y + targetHeight + 0.5, z);
+      sprite.position.set(newX, newY + targetHeight + 0.5, newZ);
     }
   });
 

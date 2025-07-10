@@ -5,10 +5,10 @@ import { MovableCharacter } from "../components/MovableCharacter";
 import CameraController from "../components/CameraController";
 import SceneHelpers from "../components/SceneHelpers";
 import HelpMenu from "../components/HelpMenu";
-import { CatStatue } from "../components/CatStatue";
+import { BasicBox } from "../components/BasicBox";
 
 export default function Scene() {
-  const debug = true;
+  const debug = false;
   const [cubePosition, setCubePosition] = useState([0, 0, 0]);
   const [sunPosition, setSunPosition] = useState([10, 10, 10]);
   const staticBoxesRef = useRef([]);
@@ -21,8 +21,6 @@ export default function Scene() {
   return (
     <>
       <Canvas style={{ height: "100vh", width: "100vw" }} shadows>
-        {/* Sky with sun position matching directional light */}
-
         <Sky
           distance={450000}
           sunPosition={sunPosition}
@@ -33,14 +31,29 @@ export default function Scene() {
         <MovableCharacter
           src="/eve.glb"
           targetHeight={2}
-          debug={true}
+          debug={debug}
           animationNames={["Take 001"]} // Optional
           onPositionChange={(pos) => setCubePosition(pos)}
           staticBoundingBoxes={staticBoxesRef.current}
         />
-        <CatStatue
-          position={[2, 0, 0]}
-          scale={1}
+
+        <BasicBox
+          position={[20, 0, 20]}
+          targetHeight={2}
+          debug={debug}
+          onBoundingBoxReady={onCatStatueBBox}
+        />
+        <BasicBox
+          position={[10, 0, 20]}
+          targetHeight={4}
+          debug={debug}
+          onBoundingBoxReady={onCatStatueBBox}
+        />
+
+        <BasicBox
+          position={[10, 0, 30]}
+          targetHeight={2}
+          debug={debug}
           onBoundingBoxReady={onCatStatueBBox}
         />
 
