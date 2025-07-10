@@ -6,7 +6,7 @@ function CameraController({ target }) {
   const { camera, gl } = useThree();
   const yawRef = useRef(Math.PI);
   const pitchRef = useRef(1);
-  const distanceRef = useRef(10); // initial distance
+  const distanceRef = useRef(5); // initial distance
 
   useEffect(() => {
     const canvas = gl.domElement;

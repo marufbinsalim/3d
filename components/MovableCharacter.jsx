@@ -17,10 +17,10 @@ export function MovableCharacter({
   debug = false,
   onPositionChange = () => {},
   staticBoundingBoxes = [],
-  GRAVITY = 40,
-  SPEED = 20,
-  JUMP_VELOCITY = 14,
-  AIR_CONTROL_FACTOR = 1,
+  GRAVITY = 44,
+  SPEED = 15,
+  JUMP_VELOCITY = 20,
+  AIR_CONTROL_FACTOR = 5,
   allowDoubleJump = true, // NEW
 }) {
   const groupRef = useRef();
@@ -164,8 +164,8 @@ export function MovableCharacter({
       vx = moveDir.x * SPEED;
       vz = moveDir.z * SPEED;
     } else {
-      vx += moveDir.x * SPEED * AIR_CONTROL_FACTOR * delta;
-      vz += moveDir.z * SPEED * AIR_CONTROL_FACTOR * delta;
+      vx += ((moveDir.x * SPEED) / 2) * AIR_CONTROL_FACTOR * delta;
+      vz += ((moveDir.z * SPEED) / 2) * AIR_CONTROL_FACTOR * delta;
     }
 
     if (keys.current["space"]) {

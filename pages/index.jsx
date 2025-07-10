@@ -5,7 +5,7 @@ import { MovableCharacter } from "../components/MovableCharacter";
 import CameraController from "../components/CameraController";
 import SceneHelpers from "../components/SceneHelpers";
 import HelpMenu from "../components/HelpMenu";
-import { BasicBox } from "../components/BasicBox";
+import { StaticModel } from "../components/StaticModel";
 
 export default function Scene() {
   const debug = false;
@@ -13,7 +13,7 @@ export default function Scene() {
   const [sunPosition, setSunPosition] = useState([10, 10, 10]);
   const staticBoxesRef = useRef([]);
 
-  function onCatStatueBBox(box) {
+  function onBBox(box) {
     console.log("cat", box);
     staticBoxesRef.current.push(box);
   }
@@ -37,24 +37,12 @@ export default function Scene() {
           staticBoundingBoxes={staticBoxesRef.current}
         />
 
-        <BasicBox
-          position={[20, 0, 20]}
-          targetHeight={2}
-          debug={debug}
-          onBoundingBoxReady={onCatStatueBBox}
-        />
-        <BasicBox
+        <StaticModel
+          src={"/cat_statue.glb"}
           position={[10, 0, 20]}
-          targetHeight={3}
-          debug={debug}
-          onBoundingBoxReady={onCatStatueBBox}
-        />
-
-        <BasicBox
-          position={[10, 0, 30]}
           targetHeight={2}
           debug={debug}
-          onBoundingBoxReady={onCatStatueBBox}
+          onBoundingBoxReady={onBBox}
         />
 
         <SceneHelpers
