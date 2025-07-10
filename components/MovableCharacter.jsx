@@ -17,6 +17,11 @@ export function MovableCharacter({
   debug = false,
   onPositionChange = () => {},
   staticBoundingBoxes = [],
+  GRAVITY = 40,
+  SPEED = 20,
+  JUMP_VELOCITY = 14,
+  AIR_CONTROL_FACTOR = 1,
+  allowDoubleJump = true, // NEW
 }) {
   const groupRef = useRef();
   const wrapperRef = useRef();
@@ -29,6 +34,7 @@ export function MovableCharacter({
   const position = useRef([0, 0, 0]);
   const velocity = useRef([0, 0, 0]);
   const canJump = useRef(true);
+  const jumpsLeft = useRef(1); // NEW
 
   const { scene, animations } = useGLTF(src);
   const { actions } = useAnimations(animations, modelRef);
@@ -95,9 +101,8 @@ export function MovableCharacter({
     const down = (e) => {
       const key = e.key.toLowerCase();
       if (key === " ") {
-        if (canJump.current) {
+        if (jumpsLeft.current > 0) {
           keys.current["space"] = true;
-          canJump.current = false;
         }
       } else {
         keys.current[key] = true;
@@ -130,10 +135,6 @@ export function MovableCharacter({
     }
   }, [isMoving, actions, animationNames]);
 
-  const GRAVITY = 40;
-  const speed = 20;
-  const jumpVelocity = 20;
-
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
@@ -158,14 +159,21 @@ export function MovableCharacter({
     const isOnGround = y <= 0.01;
 
     if (isOnGround) {
-      vx = moveDir.x * speed;
-      vz = moveDir.z * speed;
       canJump.current = true;
+      jumpsLeft.current = allowDoubleJump ? 2 : 1;
+      vx = moveDir.x * SPEED;
+      vz = moveDir.z * SPEED;
+    } else {
+      vx += moveDir.x * SPEED * AIR_CONTROL_FACTOR * delta;
+      vz += moveDir.z * SPEED * AIR_CONTROL_FACTOR * delta;
     }
 
-    if (keys.current["space"] && canJump.current) {
-      vy = jumpVelocity;
-      canJump.current = false;
+    if (keys.current["space"]) {
+      if (jumpsLeft.current > 0) {
+        vy = JUMP_VELOCITY;
+        jumpsLeft.current--;
+        keys.current["space"] = false;
+      }
     }
 
     vy -= GRAVITY * delta;
@@ -207,6 +215,7 @@ export function MovableCharacter({
             collisionYTop = boxTopY;
             vy = 0;
             canJump.current = true;
+            jumpsLeft.current = allowDoubleJump ? 2 : 1;
           }
           break;
         }
@@ -216,14 +225,9 @@ export function MovableCharacter({
         newY = collisionYTop;
         vy = 0;
         canJump.current = true;
-
-        if (moveDir.length() === 0) {
-          vx = 0;
-          vz = 0;
-        } else {
-          vx = moveDir.x * speed;
-          vz = moveDir.z * speed;
-        }
+        jumpsLeft.current = allowDoubleJump ? 2 : 1;
+        vx = moveDir.x * SPEED;
+        vz = moveDir.z * SPEED;
       } else if (collisionY) {
         vy = 0;
       } else {
@@ -307,6 +311,7 @@ export function MovableCharacter({
       newY = 0;
       vy = 0;
       canJump.current = true;
+      jumpsLeft.current = allowDoubleJump ? 2 : 1;
     }
 
     position.current = [newX, newY, newZ];
@@ -323,6 +328,8 @@ export function MovableCharacter({
         0.2
       );
     }
+
+    setIsMoving(moveDir.lengthSq() > 0);
 
     if (debug && boxHelperRef.current) {
       boxHelperRef.current.update();

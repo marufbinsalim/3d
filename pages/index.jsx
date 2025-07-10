@@ -45,7 +45,7 @@ export default function Scene() {
         />
         <BasicBox
           position={[10, 0, 20]}
-          targetHeight={4}
+          targetHeight={3}
           debug={debug}
           onBoundingBoxReady={onCatStatueBBox}
         />
