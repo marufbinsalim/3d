@@ -41,7 +41,11 @@ export function StaticModel({
       mesh.updateMatrixWorld(true);
 
       const worldBox = new THREE.Box3().setFromObject(mesh);
-      if (onBoundingBoxReady) onBoundingBoxReady(worldBox);
+      if (onBoundingBoxReady)
+        onBoundingBoxReady({
+          key: `StaticModel ${Math.random()}`,
+          box: worldBox,
+        });
 
       if (debug) {
         if (helperRef.current) {

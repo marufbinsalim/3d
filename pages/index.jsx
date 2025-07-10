@@ -9,18 +9,22 @@ import { StaticModel } from "../components/StaticModel";
 
 export default function Scene() {
   const debug = false;
+
   const [cubePosition, setCubePosition] = useState([0, 0, 0]);
   const [sunPosition, setSunPosition] = useState([10, 10, 10]);
+
+  const [tileBoundingBoxes, setTileBoundingBoxes] = useState([]);
   const staticBoxesRef = useRef([]);
 
-  function onBBox(box) {
-    console.log("cat", box);
+  function onStaticBoundingBox(box) {
+    console.log("Static Model Bounding Box:", box);
     staticBoxesRef.current.push(box);
   }
 
   return (
     <>
       <Canvas style={{ height: "100vh", width: "100vw" }} shadows>
+        {/* Sky follows sun position */}
         <Sky
           distance={450000}
           sunPosition={sunPosition}
@@ -28,31 +32,41 @@ export default function Scene() {
           azimuth={0.25}
         />
 
+        {/* Movable character with bounding boxes */}
         <MovableCharacter
           src="/eve.glb"
           targetHeight={2}
           debug={debug}
-          animationNames={["Take 001"]} // Optional
+          animationNames={["Take 001"]}
           onPositionChange={(pos) => setCubePosition(pos)}
-          staticBoundingBoxes={staticBoxesRef.current}
+          staticBoundingBoxes={[
+            ...staticBoxesRef.current,
+            ...tileBoundingBoxes,
+          ]}
         />
 
+        {/* Static 3D model with bounding box */}
         <StaticModel
-          src={"/cat_statue.glb"}
+          src="/cat_statue.glb"
           position={[10, 0, 20]}
           targetHeight={2}
           debug={debug}
-          onBoundingBoxReady={onBBox}
+          onBoundingBoxReady={onStaticBoundingBox}
         />
 
+        {/* Tile system with lighting and dynamic bounding boxes */}
         <SceneHelpers
           cubePosition={cubePosition}
           setSunPosition={setSunPosition}
           debug={debug}
+          onBoundingBoxesReady={setTileBoundingBoxes}
         />
+
+        {/* Camera follows character */}
         <CameraController target={cubePosition} />
       </Canvas>
 
+      {/* UI Help */}
       <HelpMenu />
     </>
   );

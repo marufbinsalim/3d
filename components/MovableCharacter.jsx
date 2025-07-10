@@ -31,7 +31,7 @@ export function MovableCharacter({
   const boxHelperMaterialRef = useRef(null);
 
   const keys = useRef({});
-  const position = useRef([0, 0, 0]);
+  const position = useRef([0, 1, 0]);
   const velocity = useRef([0, 0, 0]);
   const canJump = useRef(true);
   const jumpsLeft = useRef(1); // NEW
@@ -201,7 +201,8 @@ export function MovableCharacter({
       let collisionY = false;
       let collisionYTop = null;
 
-      for (const box of staticBoundingBoxes) {
+      console.log("staticBoundingBoxes", staticBoundingBoxes);
+      for (const { box } of staticBoundingBoxes) {
         if (playerBoxY.intersectsBox(box)) {
           collisionY = true;
           const playerBottomY = newY + vy * delta;
@@ -253,7 +254,7 @@ export function MovableCharacter({
       );
 
       let collisionX = false;
-      for (const box of staticBoundingBoxes) {
+      for (const { box } of staticBoundingBoxes) {
         if (playerBoxX.intersectsBox(box)) {
           collisionX = true;
           break;
@@ -288,7 +289,7 @@ export function MovableCharacter({
       );
 
       let collisionZ = false;
-      for (const box of staticBoundingBoxes) {
+      for (const { box } of staticBoundingBoxes) {
         if (playerBoxZ.intersectsBox(box)) {
           collisionZ = true;
           break;
