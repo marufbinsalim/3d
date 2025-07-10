@@ -8,7 +8,7 @@ import HelpMenu from "../components/HelpMenu";
 import { StaticModel } from "../components/StaticModel";
 
 export default function Scene() {
-  const debug = false;
+  const debug = true;
 
   const [cubePosition, setCubePosition] = useState([0, 0, 0]);
   const [sunPosition, setSunPosition] = useState([10, 10, 10]);

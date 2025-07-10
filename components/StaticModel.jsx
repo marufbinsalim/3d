@@ -72,6 +72,7 @@ export function StaticModel({
       position={[position[0], position[1] + yOffset, position[2]]}
       scale={[scale, scale, scale]}
       dispose={null}
+      castShadow
     >
       <primitive object={scene} />
     </group>

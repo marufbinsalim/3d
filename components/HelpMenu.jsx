@@ -54,6 +54,12 @@ export default function HelpMenu() {
               <li>
                 <kbd>Space</kbd> to jump
               </li>
+              <li>
+                <kbd>Space</kbd> then arrow keys for precise air control
+              </li>
+              <li>
+                <kbd>Arrow</kbd> + <kbd>Space</kbd> for Super Jump
+              </li>
             </ul>
           </motion.div>
         )}
