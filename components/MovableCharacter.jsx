@@ -340,7 +340,7 @@ export function MovableCharacter({
 
     // get highest y at the current x,z postion from the static bounding boxes
     const yAtCurrentPosition = getHighestYByPosition(newX, newZ, halfWidth);
-    if (yAtCurrentPosition !== null && newY < yAtCurrentPosition) {
+    if (yAtCurrentPosition !== null && newY <= yAtCurrentPosition + 0.05) {
       newY = yAtCurrentPosition;
     }
 
