@@ -31,7 +31,7 @@ export function MovableCharacter({
   const boxHelperMaterialRef = useRef(null);
 
   const keys = useRef({});
-  const position = useRef([0, 1, 0]);
+  const position = useRef([0, 5, 0]);
   const velocity = useRef([0, 0, 0]);
   const canJump = useRef(true);
   const jumpsLeft = useRef(1); // NEW
@@ -223,7 +223,7 @@ export function MovableCharacter({
       }
 
       if (collisionY && collisionYTop !== null) {
-        newY = collisionYTop;
+        newY = collisionYTop - 100;
         vy = 0;
         canJump.current = true;
         jumpsLeft.current = allowDoubleJump ? 2 : 1;
@@ -236,7 +236,7 @@ export function MovableCharacter({
       }
     }
 
-    const horizontalCollisionY = newY + 0.05;
+    const horizontalCollisionY = newY + 0.5;
 
     // --- X Axis collision ---
     {
@@ -307,12 +307,41 @@ export function MovableCharacter({
         newZ += vz * delta;
       }
     }
+    function getHighestYByPosition(x, z, characterRadius = 0) {
+      let highestY = null;
 
-    if (newY < 0) {
-      newY = 0;
-      vy = 0;
-      canJump.current = true;
-      jumpsLeft.current = allowDoubleJump ? 2 : 1;
+      // Sample a few points around the character’s base (4 or 8 directions)
+      const offsets = [
+        [0, 0],
+        [characterRadius, 0],
+        [-characterRadius, 0],
+        [0, characterRadius],
+        [0, -characterRadius],
+        [characterRadius, characterRadius],
+        [characterRadius, -characterRadius],
+        [-characterRadius, characterRadius],
+        [-characterRadius, -characterRadius],
+      ];
+
+      for (const { box } of staticBoundingBoxes) {
+        for (const [dx, dz] of offsets) {
+          const point = new THREE.Vector3(x + dx, 0, z + dz);
+          if (box.containsPoint(point)) {
+            if (highestY === null || box.max.y > highestY) {
+              highestY = box.max.y;
+            }
+            break; // no need to check more points for this box
+          }
+        }
+      }
+
+      return highestY;
+    }
+
+    // get highest y at the current x,z postion from the static bounding boxes
+    const yAtCurrentPosition = getHighestYByPosition(newX, newZ, halfWidth);
+    if (yAtCurrentPosition !== null && newY < yAtCurrentPosition) {
+      newY = yAtCurrentPosition;
     }
 
     position.current = [newX, newY, newZ];
