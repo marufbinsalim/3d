@@ -1,5 +1,5 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 
 function CameraController({ target }) {
@@ -7,12 +7,21 @@ function CameraController({ target }) {
   const yawRef = useRef(Math.PI);
   const pitchRef = useRef(1);
   const distanceRef = useRef(5); // initial distance
+  const hasLockedOnce = useRef(false); // prevent repeat locking
 
   useEffect(() => {
     const canvas = gl.domElement;
 
+    const requestInitialPointerLock = (e) => {
+      if (hasLockedOnce.current) return;
+      if (e.button === 1 || e.button === 0) {
+        canvas.requestPointerLock();
+        hasLockedOnce.current = true;
+      }
+    };
+
     const onMiddleMouseClick = (e) => {
-      if (e.button !== 1) return; // Only handle middle mouse button
+      if (e.button !== 1) return;
 
       const bounds = canvas.getBoundingClientRect();
       if (
@@ -50,11 +59,14 @@ function CameraController({ target }) {
       );
     };
 
+    // Need a user click to enter pointer lock initially
+    canvas.addEventListener("mousedown", requestInitialPointerLock);
     document.addEventListener("mousedown", onMiddleMouseClick);
     document.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
+      canvas.removeEventListener("mousedown", requestInitialPointerLock);
       document.removeEventListener("mousedown", onMiddleMouseClick);
       document.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("wheel", onWheel);
