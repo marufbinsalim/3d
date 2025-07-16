@@ -122,23 +122,38 @@ function SceneHelpers({
           color="yellow"
         />
       )}
-
       {[...tiles].map((key) => {
         const [x, z] = key.split(",").map(Number);
         return (
-          <mesh
-            key={key}
-            ref={(ref) => {
-              if (ref) tileRefs.current.set(key, ref);
-              else tileRefs.current.delete(key);
-            }}
-            position={[x, 0, z]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            receiveShadow
-          >
-            <planeGeometry args={[TILE_SIZE, TILE_SIZE]} />
-            <meshStandardMaterial map={colorMap} normalMap={normalMap} />
-          </mesh>
+          <group key={key} position={[x, 0, z]}>
+            <mesh
+              ref={(ref) => {
+                if (ref) tileRefs.current.set(key, ref);
+                else tileRefs.current.delete(key);
+              }}
+              rotation={[-Math.PI / 2, 0, 0]}
+              receiveShadow
+            >
+              <planeGeometry args={[TILE_SIZE, TILE_SIZE]} />
+              <meshStandardMaterial map={colorMap} normalMap={normalMap} />
+            </mesh>
+
+            {/* Border lines */}
+            <lineSegments
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[0, 0.01, 0]} // slightly above to prevent z-fighting
+            >
+              <edgesGeometry
+                attach="geometry"
+                args={[new THREE.PlaneGeometry(TILE_SIZE, TILE_SIZE)]}
+              />
+              <lineBasicMaterial
+                attach="material"
+                color="black"
+                linewidth={1}
+              />
+            </lineSegments>
+          </group>
         );
       })}
     </>

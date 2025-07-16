@@ -21,7 +21,7 @@ export function MovableCharacter({
   SPEED = 15,
   JUMP_VELOCITY = 20,
   AIR_CONTROL_FACTOR = 5,
-  allowDoubleJump = true, // NEW
+  allowDoubleJump = true,
 }) {
   const groupRef = useRef();
   const wrapperRef = useRef();
@@ -30,11 +30,14 @@ export function MovableCharacter({
   const positionLabelRef = useRef();
   const boxHelperMaterialRef = useRef(null);
 
+  const collidedBoxRef = useRef(null);
+  const collidedBoxHelperRef = useRef(null);
+
   const keys = useRef({});
   const position = useRef([0, 5, 0]);
   const velocity = useRef([0, 0, 0]);
   const canJump = useRef(true);
-  const jumpsLeft = useRef(1); // NEW
+  const jumpsLeft = useRef(1);
 
   const { scene, animations } = useGLTF(src);
   const { actions } = useAnimations(animations, modelRef);
@@ -93,6 +96,8 @@ export function MovableCharacter({
         if (boxHelperRef.current) fiberScene.remove(boxHelperRef.current);
         if (positionLabelRef.current?.sprite)
           fiberScene.remove(positionLabelRef.current.sprite);
+        if (collidedBoxHelperRef.current)
+          fiberScene.remove(collidedBoxHelperRef.current);
       }
     };
   }, [scene, fiberScene, targetHeight, debug]);
@@ -101,9 +106,7 @@ export function MovableCharacter({
     const down = (e) => {
       const key = e.key.toLowerCase();
       if (key === " ") {
-        if (jumpsLeft.current > 0) {
-          keys.current["space"] = true;
-        }
+        if (jumpsLeft.current > 0) keys.current["space"] = true;
       } else {
         keys.current[key] = true;
       }
@@ -183,7 +186,9 @@ export function MovableCharacter({
     let newY = y;
     let newZ = z;
 
-    // --- Y Axis collision ---
+    collidedBoxRef.current = null;
+
+    // Y Axis collision
     {
       const playerBoxY = new THREE.Box3(
         new THREE.Vector3(
@@ -198,13 +203,10 @@ export function MovableCharacter({
         )
       );
 
-      let collisionY = false;
-      let collisionYTop = null;
-
-      console.log("staticBoundingBoxes", staticBoundingBoxes);
       for (const { box } of staticBoundingBoxes) {
         if (playerBoxY.intersectsBox(box)) {
-          collisionY = true;
+          collidedBoxRef.current = box;
+
           const playerBottomY = newY + vy * delta;
           const boxTopY = box.max.y;
 
@@ -213,32 +215,25 @@ export function MovableCharacter({
             playerBottomY >= boxTopY - 0.1 &&
             playerBottomY <= boxTopY + 0.5
           ) {
-            collisionYTop = boxTopY;
+            newY = boxTopY;
             vy = 0;
             canJump.current = true;
             jumpsLeft.current = allowDoubleJump ? 2 : 1;
+            vx = moveDir.x * SPEED;
+            vz = moveDir.z * SPEED;
+          } else {
+            vy = 0;
           }
           break;
         }
       }
 
-      if (collisionY && collisionYTop !== null) {
-        newY = collisionYTop - 100;
-        vy = 0;
-        canJump.current = true;
-        jumpsLeft.current = allowDoubleJump ? 2 : 1;
-        vx = moveDir.x * SPEED;
-        vz = moveDir.z * SPEED;
-      } else if (collisionY) {
-        vy = 0;
-      } else {
-        newY += vy * delta;
-      }
+      newY += vy * delta;
     }
 
     const horizontalCollisionY = newY + 0.5;
 
-    // --- X Axis collision ---
+    // X Axis collision
     {
       const playerBoxX = new THREE.Box3(
         new THREE.Vector3(
@@ -253,27 +248,18 @@ export function MovableCharacter({
         )
       );
 
-      let collisionX = false;
       for (const { box } of staticBoundingBoxes) {
         if (playerBoxX.intersectsBox(box)) {
-          collisionX = true;
+          collidedBoxRef.current = box;
+          vx = 0;
           break;
         }
       }
-      if (collisionX) {
-        vx = 0;
-        if (debug && boxHelperMaterialRef.current) {
-          boxHelperMaterialRef.current.color.set(0xff0000);
-        }
-      } else {
-        if (debug && boxHelperMaterialRef.current) {
-          boxHelperMaterialRef.current.color.set(0xffffff);
-        }
-        newX += vx * delta;
-      }
+
+      newX += vx * delta;
     }
 
-    // --- Z Axis collision ---
+    // Z Axis collision
     {
       const playerBoxZ = new THREE.Box3(
         new THREE.Vector3(
@@ -288,29 +274,19 @@ export function MovableCharacter({
         )
       );
 
-      let collisionZ = false;
       for (const { box } of staticBoundingBoxes) {
         if (playerBoxZ.intersectsBox(box)) {
-          collisionZ = true;
+          collidedBoxRef.current = box;
+          vz = 0;
           break;
         }
       }
-      if (collisionZ) {
-        vz = 0;
-        if (debug && boxHelperMaterialRef.current) {
-          boxHelperMaterialRef.current.color.set(0xff0000);
-        }
-      } else {
-        if (debug && boxHelperMaterialRef.current) {
-          boxHelperMaterialRef.current.color.set(0xffffff);
-        }
-        newZ += vz * delta;
-      }
+
+      newZ += vz * delta;
     }
+
     function getHighestYByPosition(x, z, characterRadius = 0) {
       let highestY = null;
-
-      // Sample a few points around the character’s base (4 or 8 directions)
       const offsets = [
         [0, 0],
         [characterRadius, 0],
@@ -330,7 +306,7 @@ export function MovableCharacter({
             if (highestY === null || box.max.y > highestY) {
               highestY = box.max.y;
             }
-            break; // no need to check more points for this box
+            break;
           }
         }
       }
@@ -338,7 +314,6 @@ export function MovableCharacter({
       return highestY;
     }
 
-    // get highest y at the current x,z postion from the static bounding boxes
     const yAtCurrentPosition = getHighestYByPosition(newX, newZ, halfWidth);
     if (yAtCurrentPosition !== null && newY <= yAtCurrentPosition + 0.05) {
       newY = yAtCurrentPosition;
@@ -361,25 +336,44 @@ export function MovableCharacter({
 
     setIsMoving(moveDir.lengthSq() > 0);
 
-    if (debug && boxHelperRef.current) {
-      boxHelperRef.current.update();
-    }
+    // Red debug box for the collided object
+    if (debug) {
+      if (collidedBoxRef.current) {
+        if (!collidedBoxHelperRef.current) {
+          const helper = new THREE.Box3Helper(
+            collidedBoxRef.current,
+            new THREE.Color(0xff0000)
+          );
+          fiberScene.add(helper);
+          collidedBoxHelperRef.current = helper;
+        } else {
+          collidedBoxHelperRef.current.box.copy(collidedBoxRef.current);
+          collidedBoxHelperRef.current.updateMatrixWorld(true);
+          collidedBoxHelperRef.current.material.color.set(0xff0000);
+        }
+      } else if (collidedBoxHelperRef.current) {
+        fiberScene.remove(collidedBoxHelperRef.current);
+        collidedBoxHelperRef.current = null;
+      }
 
-    if (debug && positionLabelRef.current) {
-      const { sprite, ctx, canvas, texture } = positionLabelRef.current;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillText(
-        `Pos: ${newX.toFixed(2)}, ${newY.toFixed(2)}, ${newZ.toFixed(2)}`,
-        canvas.width / 2,
-        canvas.height / 2 - 16
-      );
-      ctx.fillText(
-        `Vel: ${vx.toFixed(2)}, ${vy.toFixed(2)}, ${vz.toFixed(2)}`,
-        canvas.width / 2,
-        canvas.height / 2 + 16
-      );
-      texture.needsUpdate = true;
-      sprite.position.set(newX, newY + targetHeight + 0.5, newZ);
+      if (boxHelperRef.current) boxHelperRef.current.update();
+
+      if (positionLabelRef.current) {
+        const { sprite, ctx, canvas, texture } = positionLabelRef.current;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillText(
+          `Pos: ${newX.toFixed(2)}, ${newY.toFixed(2)}, ${newZ.toFixed(2)}`,
+          canvas.width / 2,
+          canvas.height / 2 - 16
+        );
+        ctx.fillText(
+          `Vel: ${vx.toFixed(2)}, ${vy.toFixed(2)}, ${vz.toFixed(2)}`,
+          canvas.width / 2,
+          canvas.height / 2 + 16
+        );
+        texture.needsUpdate = true;
+        sprite.position.set(newX, newY + targetHeight + 0.5, newZ);
+      }
     }
   });
 
