@@ -8,7 +8,7 @@ import HelpMenu from "../components/HelpMenu";
 import { StaticModel } from "../components/StaticModel";
 
 export default function Scene() {
-  const debug = true;
+  const debug = false;
 
   const [cubePosition, setCubePosition] = useState([0, 0, 0]);
   const [sunPosition, setSunPosition] = useState([10, 10, 10]);
@@ -49,6 +49,13 @@ export default function Scene() {
         <StaticModel
           src="/cat_statue.glb"
           position={[10, 0, 20]}
+          targetHeight={2}
+          debug={debug}
+          onBoundingBoxReady={onStaticBoundingBox}
+        />
+        <StaticModel
+          src="/eve.glb"
+          position={[-10, 0, 20]}
           targetHeight={2}
           debug={debug}
           onBoundingBoxReady={onStaticBoundingBox}
