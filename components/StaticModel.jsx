@@ -40,11 +40,11 @@ function computeBoundingBox(object) {
 
   return bbox;
 }
-
 export function StaticModel({
   src,
   position = [0, 0, 0],
   targetHeight = 2,
+  targetWidth = 2,
   debug = true,
   onBoundingBoxReady,
 }) {
@@ -56,32 +56,36 @@ export function StaticModel({
     if (!groupRef.current) return;
 
     const group = groupRef.current;
-    group.clear(); // Ensure empty before inserting new model
+    group.clear(); // clean insert
 
-    // Clone the scene to safely modify it
     const sceneClone = scene.clone(true);
     group.add(sceneClone);
 
-    // Update world matrices before computing bounding box
     group.updateWorldMatrix(true, true);
     const bbox = computeBoundingBox(group);
 
     const size = new THREE.Vector3();
     bbox.getSize(size);
 
-    if (size.y === 0) return;
+    if (size.y === 0 || size.x === 0) return;
 
-    const scaleFactor = targetHeight / size.y;
+    // Compute scaling factors for height and width
+    const scaleY = targetHeight / size.y;
+    const scaleX = targetWidth / size.x;
+
+    // Choose the smaller scale to maintain aspect ratio
+    const scaleFactor = Math.min(scaleY, scaleX);
     sceneClone.scale.setScalar(scaleFactor);
 
-    // Reposition so that base sits on Y=0
+    // Recalculate offset so bottom aligns to Y=0
     const offsetY = -bbox.min.y * scaleFactor;
-    sceneClone.position.y = offsetY;
+    const offsetX = -(bbox.min.x + size.x / 2) * scaleFactor; // center on X if needed
+    sceneClone.position.set(offsetX, offsetY, 0);
 
-    // Compute new bounding box
     requestAnimationFrame(() => {
       group.updateMatrixWorld(true);
       const newBBox = computeBoundingBox(group);
+
       if (onBoundingBoxReady) {
         onBoundingBoxReady({
           key: `StaticModel ${Math.random()}`,
@@ -106,7 +110,7 @@ export function StaticModel({
         helperRef.current = null;
       }
     };
-  }, [scene, targetHeight, debug]);
+  }, [scene, targetHeight, targetWidth, debug]);
 
   return <group ref={groupRef} position={position} dispose={null} castShadow />;
 }
