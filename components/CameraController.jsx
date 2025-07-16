@@ -11,7 +11,9 @@ function CameraController({ target }) {
   useEffect(() => {
     const canvas = gl.domElement;
 
-    const onGlobalClick = (e) => {
+    const onMiddleMouseClick = (e) => {
+      if (e.button !== 1) return; // Only handle middle mouse button
+
       const bounds = canvas.getBoundingClientRect();
       if (
         e.clientX >= bounds.left &&
@@ -41,21 +43,19 @@ function CameraController({ target }) {
 
     const onWheel = (e) => {
       e.preventDefault();
-      // Zoom speed
       const zoomSpeed = 0.5;
-      // Clamp distance between 2 and 50 (for example)
       distanceRef.current = Math.min(
         50,
         Math.max(2, distanceRef.current + e.deltaY * 0.01 * zoomSpeed)
       );
     };
 
-    document.addEventListener("click", onGlobalClick);
+    document.addEventListener("mousedown", onMiddleMouseClick);
     document.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
-      document.removeEventListener("click", onGlobalClick);
+      document.removeEventListener("mousedown", onMiddleMouseClick);
       document.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("wheel", onWheel);
     };

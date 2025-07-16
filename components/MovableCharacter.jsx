@@ -18,7 +18,7 @@ export function MovableCharacter({
   onPositionChange = () => {},
   staticBoundingBoxes = [],
   GRAVITY = 44,
-  SPEED = 15,
+  SPEED = 6,
   JUMP_VELOCITY = 20,
   AIR_CONTROL_FACTOR = 5,
   allowDoubleJump = true,
@@ -43,6 +43,8 @@ export function MovableCharacter({
   const { actions } = useAnimations(animations, modelRef);
 
   const [isMoving, setIsMoving] = useState(false);
+  const isGrounded = useRef(false);
+
   const [scaleFactor, setScaleFactor] = useState(1);
   const { camera, scene: fiberScene } = useThree();
 
@@ -114,6 +116,9 @@ export function MovableCharacter({
     const up = (e) => {
       const key = e.key.toLowerCase();
       if (key === " ") {
+        actions["Taunt"].isRunning()
+          ? actions["Taunt"].reset()
+          : actions["Taunt"].play();
         keys.current["space"] = false;
       } else {
         keys.current[key] = false;
@@ -129,12 +134,15 @@ export function MovableCharacter({
   }, []);
 
   useEffect(() => {
-    const animName = animationNames[0] || "Take 001";
+    console.log(actions);
+    const animName = animationNames[0];
     if (!actions[animName]) return;
     if (isMoving) {
-      actions[animName].reset().fadeIn(0.2).play();
+      actions["Walk"].play();
+      actions["Walk"].timeScale = 2; // 2x speed (default is 1)
     } else {
-      actions[animName].fadeOut(0.2);
+      actions["Walk"].stop();
+      actions["Idle"].play();
     }
   }, [isMoving, actions, animationNames]);
 
@@ -160,6 +168,7 @@ export function MovableCharacter({
     moveDir.normalize();
 
     const isOnGround = y <= 0.01;
+    isGrounded.current = isOnGround;
 
     if (isOnGround) {
       canJump.current = true;
@@ -317,6 +326,9 @@ export function MovableCharacter({
     const yAtCurrentPosition = getHighestYByPosition(newX, newZ, halfWidth);
     if (yAtCurrentPosition !== null && newY <= yAtCurrentPosition + 0.05) {
       newY = yAtCurrentPosition;
+      isGrounded.current = true;
+    } else {
+      isGrounded.current = false;
     }
 
     position.current = [newX, newY, newZ];
@@ -374,6 +386,10 @@ export function MovableCharacter({
         texture.needsUpdate = true;
         sprite.position.set(newX, newY + targetHeight + 0.5, newZ);
       }
+    }
+
+    if (isGrounded.current && actions["Taunt"]?.isRunning()) {
+      actions["Taunt"].stop();
     }
   });
 

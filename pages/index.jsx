@@ -34,10 +34,10 @@ export default function Scene() {
 
         {/* Movable character with bounding boxes */}
         <MovableCharacter
-          src="/eve.glb"
+          src="/calibur.glb"
           targetHeight={2}
           debug={debug}
-          animationNames={["Take 001"]}
+          animationNames={["Walk"]}
           onPositionChange={(pos) => setCubePosition(pos)}
           staticBoundingBoxes={[
             ...staticBoxesRef.current,
@@ -56,7 +56,7 @@ export default function Scene() {
         <StaticModel
           src="/eve.glb"
           position={[-10, 0, 20]}
-          targetHeight={2}
+          targetHeight={5}
           debug={debug}
           onBoundingBoxReady={onStaticBoundingBox}
         />
